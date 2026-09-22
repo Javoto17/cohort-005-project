@@ -183,10 +183,13 @@ export async function action({ request }: Route.ActionArgs) {
     try {
       createCategory(parsed.data.name);
       return { success: true, message: "Category created." };
-    } catch (e) {
+    } catch (error) {
       return data(
         {
-          error: e instanceof Error ? e.message : "Failed to create category.",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to create category.",
         },
         { status: 400 }
       );
@@ -197,10 +200,13 @@ export async function action({ request }: Route.ActionArgs) {
     try {
       updateCategory(parsed.data.categoryId, parsed.data.name);
       return { success: true, message: "Category updated." };
-    } catch (e) {
+    } catch (error) {
       return data(
         {
-          error: e instanceof Error ? e.message : "Failed to update category.",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to update category.",
         },
         { status: 400 }
       );
@@ -211,10 +217,13 @@ export async function action({ request }: Route.ActionArgs) {
     try {
       deleteCategory(parsed.data.categoryId);
       return { success: true, message: "Category deleted." };
-    } catch (e) {
+    } catch (error) {
       return data(
         {
-          error: e instanceof Error ? e.message : "Failed to delete category.",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to delete category.",
         },
         { status: 400 }
       );
@@ -242,6 +251,9 @@ function CreateCategoryRow({ onClose }: { onClose: () => void }) {
     if (fetcher.state === "idle" && fetcher.data?.error) {
       toast.error(fetcher.data.error);
     }
+    // Run once per fetcher result. onClose is a new function on every parent
+    // render, and re-running on it would show the toast again.
+    // oxlint-disable-next-line react/exhaustive-deps
   }, [fetcher.state, fetcher.data]);
 
   function handleSave() {
@@ -255,11 +267,11 @@ function CreateCategoryRow({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Enter") {
+      event.preventDefault();
       handleSave();
-    } else if (e.key === "Escape") {
+    } else if (event.key === "Escape") {
       handleCancel();
     }
   }
@@ -271,7 +283,7 @@ function CreateCategoryRow({ onClose }: { onClose: () => void }) {
           ref={inputRef}
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(event) => setName(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Category name"
           className="h-8 text-sm"
@@ -370,11 +382,11 @@ function CategoryRow({
     setIsEditing(false);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Enter") {
+      event.preventDefault();
       handleSave();
-    } else if (e.key === "Escape") {
+    } else if (event.key === "Escape") {
       handleCancel();
     }
   }
@@ -394,7 +406,7 @@ function CategoryRow({
             ref={nameInputRef}
             type="text"
             value={editName}
-            onChange={(e) => setEditName(e.target.value)}
+            onChange={(event) => setEditName(event.target.value)}
             onKeyDown={handleKeyDown}
             className="h-8 text-sm"
           />
@@ -506,6 +518,7 @@ export function HydrateFallback() {
               </thead>
               <tbody>
                 {Array.from({ length: 4 }).map((_, i) => (
+                  // oxlint-disable-next-line react/no-array-index-key -- placeholders never reorder
                   <TableRowSkeleton key={i} />
                 ))}
               </tbody>

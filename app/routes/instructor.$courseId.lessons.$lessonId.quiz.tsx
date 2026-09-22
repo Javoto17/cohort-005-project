@@ -90,24 +90,24 @@ const quizActionSchema = z.discriminatedUnion("intent", [
 
 // ─── Types for wizard state ───
 
-interface WizardOption {
+type WizardOption = {
   id: string;
   text: string;
   isCorrect: boolean;
-}
+};
 
-interface WizardQuestion {
+type WizardQuestion = {
   id: string;
   text: string;
   type: QuestionType;
   options: WizardOption[];
-}
+};
 
-interface WizardState {
+type WizardState = {
   title: string;
   passingScore: number;
   questions: WizardQuestion[];
-}
+};
 
 function generateId() {
   return Math.random().toString(36).slice(2, 10);
@@ -177,27 +177,6 @@ function createQuiz(lessonId: number, title: string, passingScore: number) {
     .get();
 }
 
-function updateQuiz(
-  id: number,
-  title: string | null,
-  passingScore: number | null
-) {
-  const updates: Record<string, unknown> = {};
-  if (title !== null) updates.title = title;
-  if (passingScore !== null) updates.passingScore = passingScore;
-
-  if (Object.keys(updates).length === 0) {
-    return getQuizById(id);
-  }
-
-  return db
-    .update(quizzes)
-    .set(updates)
-    .where(eq(quizzes.id, id))
-    .returning()
-    .get();
-}
-
 function deleteQuiz(id: number) {
   // Cascade: delete answers -> attempts -> options -> questions -> quiz
   const questions = getQuestionsByQuiz(id);
@@ -227,26 +206,17 @@ function createQuestion(
 ) {
   const pos =
     position ??
-    db
+    (db
       .select({
         max: sql<number>`coalesce(max(${quizQuestions.position}), 0)`,
       })
       .from(quizQuestions)
       .where(eq(quizQuestions.quizId, quizId))
-      .get()!.max + 1;
+      .get()?.max ?? 0) + 1;
 
   return db
     .insert(quizQuestions)
     .values({ quizId, questionText, questionType, position: pos })
-    .returning()
-    .get();
-}
-
-function deleteQuestion(id: number) {
-  db.delete(quizOptions).where(eq(quizOptions.questionId, id)).run();
-  return db
-    .delete(quizQuestions)
-    .where(eq(quizQuestions.id, id))
     .returning()
     .get();
 }
@@ -483,7 +453,7 @@ function StepIndicator({
 export default function QuizBuilderWizard({
   loaderData,
 }: Route.ComponentProps) {
-  const { course, lesson, module: mod, existingQuiz } = loaderData;
+  const { course, lesson, existingQuiz } = loaderData;
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -546,8 +516,8 @@ export default function QuizBuilderWizard({
             <Input
               id="quizTitle"
               value={wizard.title}
-              onChange={(e) =>
-                setWizard((prev) => ({ ...prev, title: e.target.value }))
+              onChange={(event) =>
+                setWizard((prev) => ({ ...prev, title: event.target.value }))
               }
               placeholder="e.g. Module 1 Quiz"
             />
@@ -560,10 +530,10 @@ export default function QuizBuilderWizard({
               min={0}
               max={100}
               value={wizard.passingScore}
-              onChange={(e) =>
+              onChange={(event) =>
                 setWizard((prev) => ({
                   ...prev,
-                  passingScore: parseInt(e.target.value, 10) || 0,
+                  passingScore: parseInt(event.target.value, 10) || 0,
                 }))
               }
               className="max-w-32"
@@ -699,9 +669,9 @@ export default function QuizBuilderWizard({
                             <div className="flex-1 space-y-3">
                               <Input
                                 value={q.text}
-                                onChange={(e) =>
+                                onChange={(event) =>
                                   updateQuestion(q.id, {
-                                    text: e.target.value,
+                                    text: event.target.value,
                                   })
                                 }
                                 placeholder="Enter question text..."
@@ -712,9 +682,9 @@ export default function QuizBuilderWizard({
                                 </Label>
                                 <Select
                                   value={q.type}
-                                  onValueChange={(val) =>
+                                  onValueChange={(value) =>
                                     updateQuestion(q.id, {
-                                      type: val as QuestionType,
+                                      type: value as QuestionType,
                                     })
                                   }
                                 >
@@ -879,9 +849,9 @@ export default function QuizBuilderWizard({
                       ) : (
                         <Input
                           value={opt.text}
-                          onChange={(e) =>
+                          onChange={(event) =>
                             updateOption(q.id, opt.id, {
-                              text: e.target.value,
+                              text: event.target.value,
                             })
                           }
                           placeholder="Enter option text..."
@@ -1026,8 +996,9 @@ export default function QuizBuilderWizard({
                   Please fix these issues before saving:
                 </p>
                 <ul className="list-inside list-disc space-y-1 text-sm text-destructive">
-                  {validationErrors.map((err, i) => (
-                    <li key={i}>{err}</li>
+                  {validationErrors.map((error, i) => (
+                    // oxlint-disable-next-line react/no-array-index-key -- messages can repeat, and the list is rebuilt on every render
+                    <li key={i}>{error}</li>
                   ))}
                 </ul>
               </div>

@@ -61,10 +61,6 @@ const lessonParamsSchema = z.object({
   lessonId: z.coerce.number().int(),
 });
 
-const markCompleteSchema = z.object({
-  intent: z.literal("mark-complete"),
-});
-
 const createCommentSchema = z.object({
   intent: z.literal("create-comment"),
   body: z.string(),
@@ -147,7 +143,7 @@ function getCourseWithDetails(id: number) {
       ? db
           .select()
           .from(lessons)
-          .where(or(...moduleIds.map((mid) => eq(lessons.moduleId, mid)))!)
+          .where(or(...moduleIds.map((mid) => eq(lessons.moduleId, mid))))
           .orderBy(lessons.position)
           .all()
       : [];
@@ -198,7 +194,7 @@ function getLessonProgressForCourse(userId: number, courseId: number) {
   const courseLessons = db
     .select({ id: lessons.id })
     .from(lessons)
-    .where(or(...courseModules.map((m) => eq(lessons.moduleId, m.id)))!)
+    .where(or(...courseModules.map((m) => eq(lessons.moduleId, m.id))))
     .all();
 
   if (courseLessons.length === 0) return [];
@@ -209,7 +205,7 @@ function getLessonProgressForCourse(userId: number, courseId: number) {
     .where(
       and(
         eq(lessonProgress.userId, userId),
-        or(...courseLessons.map((l) => eq(lessonProgress.lessonId, l.id)))!
+        or(...courseLessons.map((l) => eq(lessonProgress.lessonId, l.id)))
       )
     )
     .all();
@@ -515,24 +511,30 @@ function getBestAttempt(userId: number, quizId: number) {
     .get();
 }
 
-function calculateGrade(score: any): any {
-  try {
-    if (score >= 0.9) return "A";
-    if (score >= 0.8) return "B";
-    if (score >= 0.7) return "C";
-    if (score >= 0.6) return "D";
-    return "F";
-  } catch (e) {
-    console.log(e);
-    return "F";
-  }
+function calculateGrade(score: number): string {
+  if (score >= 0.9) return "A";
+  if (score >= 0.8) return "B";
+  if (score >= 0.7) return "C";
+  if (score >= 0.6) return "D";
+  return "F";
 }
 
-function computeResult(userId: any, quizId: any, selectedAnswers: any): any {
+type QuestionResult = {
+  questionId: number;
+  correct: boolean;
+  selectedOptionId: number | null;
+  correctOptionId: number | null;
+};
+
+function computeResult(
+  userId: number,
+  quizId: number,
+  selectedAnswers: Record<number, number>
+) {
   try {
     const quiz = db.select().from(quizzes).where(eq(quizzes.id, quizId)).get();
     if (!quiz) {
-      console.log("quiz not found");
+      console.error("quiz not found");
       return null;
     }
 
@@ -544,8 +546,8 @@ function computeResult(userId: any, quizId: any, selectedAnswers: any): any {
       .all();
 
     let correct = 0;
-    let total = questions.length;
-    const questionResults: any[] = [];
+    const total = questions.length;
+    const questionResults: QuestionResult[] = [];
 
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
@@ -631,8 +633,8 @@ function computeResult(userId: any, quizId: any, selectedAnswers: any): any {
       totalQuestions: total,
       questionResults,
     };
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error(error);
     return null;
   }
 }
@@ -727,7 +729,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   let lessonStatus: string | null = null;
   let lastWatchPosition = 0;
   let watchProgress = 0;
-  let lessonProgressMap: Record<number, string> = {};
+  const lessonProgressMap: Record<number, string> = {};
 
   if (currentUserId) {
     if (enrolled) {
@@ -1171,6 +1173,7 @@ export default function LessonViewer({ loaderData }: Route.ComponentProps) {
           {contentHtml && (
             <div
               className="prose prose-neutral dark:prose-invert mb-8 max-w-none"
+              // oxlint-disable-next-line react/no-danger -- the instructor wrote this Markdown
               dangerouslySetInnerHTML={{ __html: contentHtml }}
             />
           )}
