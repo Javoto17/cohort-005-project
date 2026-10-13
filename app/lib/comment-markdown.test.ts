@@ -48,9 +48,7 @@ describe("renderComment", () => {
       ["yaml", "a: 1"],
       ["markdown", "# Title"],
     ])("highlights %s", async (lang, code) => {
-      const html = await renderComment(
-        "```" + lang + "\n" + code + "\n```"
-      );
+      const html = await renderComment("```" + lang + "\n" + code + "\n```");
 
       expect(html).toMatch(HIGHLIGHTED_TOKEN);
     });
@@ -120,7 +118,7 @@ describe("renderComment", () => {
       const html = await renderComment('<img src=x onerror="alert(1)">');
 
       expect(html).not.toContain("<img");
-      expect(html).not.toContain("onerror=\"alert(1)\"");
+      expect(html).not.toContain('onerror="alert(1)"');
     });
 
     it("escapes an iframe", async () => {
@@ -137,9 +135,7 @@ describe("renderComment", () => {
     });
 
     it("escapes ampersands and both kinds of quote", async () => {
-      const html = await renderComment(
-        `<span title="a&b" class='x'>`
-      );
+      const html = await renderComment(`<span title="a&b" class='x'>`);
 
       expect(html).toContain(
         "&lt;span title=&quot;a&amp;b&quot; class=&#39;x&#39;&gt;"
@@ -155,9 +151,7 @@ describe("renderComment", () => {
 
   describe("links", () => {
     it("keeps https links and marks them nofollow", async () => {
-      const html = await renderComment(
-        "[docs](https://example.test/a)"
-      );
+      const html = await renderComment("[docs](https://example.test/a)");
 
       expect(html).toBe(
         '<p><a href="https://example.test/a" rel="nofollow noopener noreferrer" target="_blank">docs</a></p>\n'
@@ -165,17 +159,13 @@ describe("renderComment", () => {
     });
 
     it("keeps http links", async () => {
-      const html = await renderComment(
-        "[docs](http://example.test/a)"
-      );
+      const html = await renderComment("[docs](http://example.test/a)");
 
       expect(html).toContain('href="http://example.test/a"');
     });
 
     it("keeps mailto links", async () => {
-      const html = await renderComment(
-        "[mail](mailto:a@example.test)"
-      );
+      const html = await renderComment("[mail](mailto:a@example.test)");
 
       expect(html).toContain('href="mailto:a@example.test"');
     });
