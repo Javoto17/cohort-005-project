@@ -12,7 +12,7 @@ import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import {
   UserRole,
-  RefundStatus,
+  RefundRequestStatus,
   users,
   courses,
   purchases,
@@ -55,7 +55,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw data("User not found.", { status: 404 });
   }
 
-  const pendingChargebacks = db
+  const refundRequests = db
     .select({
       id: refunds.id,
       courseTitle: courses.title,
@@ -70,7 +70,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     .where(
       and(
         eq(purchases.userId, currentUserId),
-        eq(refunds.status, RefundStatus.Requested)
+        eq(refunds.status, RefundRequestStatus.Open)
       )
     )
     .all();
@@ -83,7 +83,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       bio: currentUser.bio,
       role: currentUser.role,
     },
-    pendingChargebacks,
+    refundRequests,
   };
 }
 
@@ -122,7 +122,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
-  const { user, pendingChargebacks } = loaderData;
+  const { user, refundRequests } = loaderData;
   const fetcher = useFetcher();
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -209,35 +209,36 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
         </CardContent>
       </Card>
 
-      {pendingChargebacks.length > 0 && (
+      {refundRequests.length > 0 && (
         <Card className="mt-8 max-w-md">
           <CardHeader>
-            <h2 className="text-lg font-semibold">Pending Chargeback</h2>
+            <h2 className="text-lg font-semibold">Refund requests</h2>
             <p className="text-sm text-muted-foreground">
-              {pendingChargebacks.length === 1
-                ? "One chargeback is waiting on us."
-                : `${pendingChargebacks.length} chargebacks are waiting on us.`}
+              {refundRequests.length === 1
+                ? "One refund request is under review."
+                : `${refundRequests.length} refund requests are under review.`}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {pendingChargebacks.map((chargeback) => (
-              <div key={chargeback.id} className="rounded-md border p-3">
+            {refundRequests.map((refundRequest) => (
+              <div key={refundRequest.id} className="rounded-md border p-3">
                 <div className="flex items-start justify-between gap-3">
                   <Link
-                    to={`/courses/${chargeback.courseSlug}`}
+                    to={`/courses/${refundRequest.courseSlug}`}
                     className="font-medium hover:underline"
                   >
-                    {chargeback.courseTitle}
+                    {refundRequest.courseTitle}
                   </Link>
                   <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                    Pending Chargeback
+                    Under review
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {formatPrice(chargeback.amountPaid)} · raised{" "}
-                  {new Date(chargeback.requestedAt).toLocaleDateString()}
+                  Requested amount: {formatPrice(refundRequest.amountPaid)} ·
+                  submitted{" "}
+                  {new Date(refundRequest.requestedAt).toLocaleDateString()}
                 </p>
-                <p className="mt-2 text-sm">{chargeback.reason}</p>
+                <p className="mt-2 text-sm">{refundRequest.reason}</p>
               </div>
             ))}
           </CardContent>
