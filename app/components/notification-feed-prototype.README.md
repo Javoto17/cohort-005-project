@@ -13,6 +13,11 @@ Cadence shell, preserving the host page's loader and content:
 - `?variant=B`: wide right drawer, more room for context alongside the current task.
 - `?variant=C`: full-width Notification Feed, prioritise scanning over the host task.
 
+Human feedback: side drawer selected, with CSS animation on opening and closing.
+Variant B slides over 300ms while its backdrop fades. Reduced-motion preferences
+disable both transitions; the closed drawer is inert and hidden from assistive
+technology. Other interaction decisions below remain open.
+
 Click the bell to open. Try All / Unread, mark read / unread, mark all read,
 clicking a row, closing/reopening, empty state, and switching people with DevUI.
 

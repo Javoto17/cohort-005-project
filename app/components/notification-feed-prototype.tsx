@@ -313,22 +313,26 @@ function Prototype({ userId }: { userId: number | null }) {
           {rows(false)}
         </section>
       )}
-      {open && variant === "B" && (
-        <>
+      {variant === "B" && (
+        <div
+          aria-hidden={!open}
+          inert={!open}
+          className={open ? "" : "pointer-events-none"}
+        >
           <button
             aria-label="Close drawer backdrop"
-            className="fixed inset-0 z-40 bg-black/25"
+            className={`fixed inset-0 z-40 bg-black/25 transition-opacity duration-300 ease-out motion-reduce:transition-none ${open ? "opacity-100" : "opacity-0"}`}
             onClick={() => setOpen(false)}
           />
           <section
             aria-label="Notification Feed drawer"
-            className="fixed inset-y-0 right-0 z-40 w-[min(540px,100vw)] overflow-y-auto border-l bg-background pb-48 shadow-xl"
+            className={`fixed inset-y-0 right-0 z-40 w-[min(540px,100vw)] overflow-y-auto border-l bg-background pb-48 shadow-xl transition-transform duration-300 ease-out motion-reduce:transition-none ${open ? "translate-x-0" : "translate-x-full"}`}
           >
             {heading}
             {filters}
             {rows(true)}
           </section>
-        </>
+        </div>
       )}
       {open && variant === "C" && (
         <section
