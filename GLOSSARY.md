@@ -70,6 +70,8 @@ A Seat a Student has claimed. It belongs to that Student, so a Team Licence with
 
 ### Refunds
 
+Bank-initiated chargebacks are outside Cadence's domain and are not Refunds or Refund Requests.
+
 **Refund Request**:
 The buyer's ask, with their reason, to get back what they paid for one specific Purchase. A Platform Admin approves or declines it. One Purchase can have several Refund Requests over time, but only one can be undecided at once.
 _Avoid_: Refund (for the ask itself), Cancellation, Reversal, Chargeback
