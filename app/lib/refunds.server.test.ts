@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
 import { LessonProgressStatus, RefundStatus, UserRole } from "~/db/schema";
+import { getNote, getBookmark, saveNote, toggleBookmark } from "./saved.server";
 import {
   approveRefundRequest,
   checkRefundRequest,
@@ -165,6 +166,21 @@ function getSeat(seatId: number) {
 }
 
 describe("raising a Refund Request", () => {
+  it("keeps the Student's Bookmarks and Notes after approval removes access", async () => {
+    const purchase = buyForSelf(base.user.id);
+    const lessonId = lessonIds[0];
+    if (lessonId === undefined) throw new Error("Expected a lesson");
+    toggleBookmark(db, base.user.id, lessonId, NOW);
+    saveNote(db, base.user.id, lessonId, "Keep my private writing", NOW);
+    const refundId = await raise(purchase.id, base.user.id);
+    const result = await approveRefundRequest(
+      db, refundId, platformAdmin.id, null, NOW, notifications
+    );
+    expect(result.ok).toBe(true);
+    expect(isEnrolled(base.user.id)).toBe(false);
+    expect(getBookmark(db, base.user.id, lessonId)).toBeDefined();
+    expect(getNote(db, base.user.id, lessonId)?.body).toBe("Keep my private writing");
+  });
   it("lets the buyer raise one on an Individual Purchase inside the window", async () => {
     const purchase = buyForSelf(base.user.id);
 
