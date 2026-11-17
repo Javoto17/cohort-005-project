@@ -1,7 +1,9 @@
-import { Link } from "react-router";
 import type { Route } from "./+types/saved";
+import { SavedLessonCard } from "~/features/saved/saved-lesson-card";
 import { db } from "~/db";
-import { requireUserId } from "~/lib/access.server";
+import { getAccess, requireUserId } from "~/lib/access.server";
+import { courses } from "~/db/schema";
+import { inArray } from "drizzle-orm";
 import { listBookmarks } from "~/lib/bookmarks.server";
 import { listNotes } from "~/lib/notes.server";
 import { Card, CardContent } from "~/components/ui/card";
@@ -17,10 +19,34 @@ export function meta() {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
+  const savedBookmarks = listBookmarks(db, userId);
+  const savedNotes = listNotes(db, userId);
+  const slugs = [
+    ...new Set(
+      [...savedBookmarks, ...savedNotes].map((row) => row.lesson.courseSlug)
+    ),
+  ];
+  const accessible = new Set<string>();
+  if (slugs.length > 0) {
+    const savedCourses = db
+      .select({ id: courses.id, slug: courses.slug })
+      .from(courses)
+      .where(inArray(courses.slug, slugs))
+      .all();
+    for (const course of savedCourses) {
+      if ((await getAccess(request, course.id)).canViewContent) {
+        accessible.add(course.slug);
+      }
+    }
+  }
 
   return {
-    savedBookmarks: listBookmarks(db, userId),
-    savedNotes: listNotes(db, userId),
+    savedBookmarks: savedBookmarks.filter((row) =>
+      accessible.has(row.lesson.courseSlug)
+    ),
+    savedNotes: savedNotes.filter((row) =>
+      accessible.has(row.lesson.courseSlug)
+    ),
   };
 }
 
@@ -89,32 +115,5 @@ export default function Saved({ loaderData }: Route.ComponentProps) {
         </section>
       </div>
     </div>
-  );
-}
-
-type SavedLesson =
-  Route.ComponentProps["loaderData"]["savedBookmarks"][number]["lesson"];
-
-/** A row on the Saved page: a link to the Lesson, named with its Course. */
-function SavedLessonCard({
-  lesson,
-  children,
-}: {
-  lesson: SavedLesson;
-  children?: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardContent className="space-y-1 py-3">
-        <Link
-          to={`/courses/${lesson.courseSlug}/lessons/${lesson.id}`}
-          className="text-sm font-medium hover:underline"
-        >
-          {lesson.title}
-        </Link>
-        <p className="text-xs text-muted-foreground">{lesson.courseTitle}</p>
-        {children}
-      </CardContent>
-    </Card>
   );
 }

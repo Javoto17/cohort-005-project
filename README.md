@@ -90,7 +90,8 @@ You don't need these yet, but you'll be asked for them along the way. Both have 
 | ---------------------------- | -------------------------------------------- |
 | `npm run dev`                | Start the development server                 |
 | `npm run build`              | Build for production                         |
-| `npm run test`               | Run tests with Vitest                        |
+| `npm run lint`               | Check mechanical coding standards            |
+| `npm run test`               | Check standards, then run tests with Vitest  |
 | `npm run test:watch`         | Run tests in watch mode                      |
 | `npm run typecheck`          | Type-check the project                       |
 | `npm run db:generate`        | Generate a migration from the schema         |

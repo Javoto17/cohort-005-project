@@ -1,5 +1,16 @@
 # Coding standards
 
+For private-data or content-access changes, consult the route-test seam in
+[`docs/agents/guardrails.md`](docs/agents/guardrails.md). For component structure,
+intent constants and object-type placement, that document points to the
+automated checks and their legacy exceptions.
+
+## Make calculated values readable
+
+Name intermediate values when that reveals a condition's meaning or separates
+calculation from presentation. Keep simple expressions inline when a name
+would merely repeat them. Review for clarity, not a mandatory variable count.
+
 ## Fail with a thrown response, not a return value
 
 A loader or an action that cannot continue throws. It does not return an

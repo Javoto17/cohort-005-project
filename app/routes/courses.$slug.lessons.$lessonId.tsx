@@ -14,6 +14,9 @@ import { defaultNotifications } from "~/lib/notifications.server";
 import { isBookmarked, toggleBookmark } from "~/lib/bookmarks.server";
 import { getNote, saveNote } from "~/lib/notes.server";
 import { MAX_NOTE_LENGTH } from "~/lib/notes";
+import { SavedIntent } from "~/features/saved/intents";
+import { BookmarkToggle } from "~/features/saved/bookmark-toggle";
+import { LessonNote } from "~/features/saved/lesson-note";
 import {
   CommentThread,
   type RenderedComment,
@@ -39,7 +42,6 @@ import {
 import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { Textarea } from "~/components/ui/textarea";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -48,11 +50,8 @@ import {
   ChevronRight,
   Circle,
   Clock,
-  Bookmark,
-  BookmarkCheck,
   Github,
   HelpCircle,
-  NotebookPen,
   MapPin,
   PlayCircle,
   ShieldAlert,
@@ -60,7 +59,7 @@ import {
   Trophy,
   RotateCcw,
 } from "lucide-react";
-import { cn, formatDuration, formatRelativeTime } from "~/lib/utils";
+import { cn, formatDuration } from "~/lib/utils";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { YouTubePlayer } from "~/components/youtube-player";
 import { data, isRouteErrorResponse } from "react-router";
@@ -925,12 +924,20 @@ export async function action({ params, request }: Route.ActionArgs) {
 
   // Bookmark and Note intents re-check access here, like the comment intents
   // above — loader guards don't protect actions.
-  if (intent === "toggle-bookmark" || intent === "save-note") {
+  if (
+    intent === SavedIntent.ToggleBookmark ||
+    intent === SavedIntent.SaveNote
+  ) {
     await requireContentAccess(request, course.id);
     requireLessonInCourse(lessonId, course.id);
 
-    if (intent === "toggle-bookmark") {
-      const bookmarked = toggleBookmark(db, currentUserId, lessonId, new Date());
+    if (intent === SavedIntent.ToggleBookmark) {
+      const bookmarked = toggleBookmark(
+        db,
+        currentUserId,
+        lessonId,
+        new Date()
+      );
       return { ok: true, bookmarked };
     }
 
@@ -1316,72 +1323,6 @@ export default function LessonViewer({ loaderData }: Route.ComponentProps) {
         </div>
       </div>
     </div>
-  );
-}
-
-function BookmarkToggle({ bookmarked }: { bookmarked: boolean }) {
-  const fetcher = useFetcher<{ ok: boolean }>();
-  const isSaving = fetcher.state !== "idle";
-
-  return (
-    <fetcher.Form method="post">
-      <input type="hidden" name="intent" value="toggle-bookmark" />
-      <Button type="submit" variant="outline" size="sm" disabled={isSaving}>
-        {bookmarked ? (
-          <BookmarkCheck className="mr-1.5 size-4" />
-        ) : (
-          <Bookmark className="mr-1.5 size-4" />
-        )}
-        {bookmarked ? "Bookmarked" : "Bookmark"}
-      </Button>
-    </fetcher.Form>
-  );
-}
-
-function LessonNote({
-  note,
-}: {
-  note: Route.ComponentProps["loaderData"]["note"];
-}) {
-  const fetcher = useFetcher<{ ok: boolean; error?: string }>();
-  const isSaving = fetcher.state !== "idle";
-  const error = fetcher.data?.error;
-
-  return (
-    <Card className="mb-8">
-      <CardContent className="space-y-3 pt-6">
-        <div className="flex items-center gap-2">
-          <NotebookPen className="size-4 text-muted-foreground" />
-          <h2 className="font-semibold">Your notes</h2>
-        </div>
-
-        <fetcher.Form method="post" className="space-y-3">
-          <input type="hidden" name="intent" value="save-note" />
-          {/* A Note is plain text — never passed through the Markdown renderer. */}
-          <Textarea
-            name="body"
-            rows={6}
-            defaultValue={note?.body ?? ""}
-            placeholder="Only you can read this."
-            className="resize-y"
-          />
-          <div className="flex items-center gap-3">
-            <Button type="submit" size="sm" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-            {error && <span className="text-sm text-red-600">{error}</span>}
-            {!error && note && (
-              <span
-                suppressHydrationWarning
-                className="text-xs text-muted-foreground"
-              >
-                Last edited {formatRelativeTime(note.updatedAt)}
-              </span>
-            )}
-          </div>
-        </fetcher.Form>
-      </CardContent>
-    </Card>
   );
 }
 
