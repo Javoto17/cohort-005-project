@@ -1,0 +1,9 @@
+node_modules/
+build/
+.react-router/
+.claude/worktrees/
+reports/
+.outbox/
+request-logger/logs/
+package-lock.json
+drizzle/meta/
