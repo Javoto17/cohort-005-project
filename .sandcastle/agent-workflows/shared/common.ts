@@ -22,11 +22,11 @@ export const writeJson = (filename: string, value: unknown): void => {
 };
 
 // Keep the historical export name so the five workflow consumers stay unchanged.
-// This uses Gemini API billing, not a Claude or Google AI subscription.
+// This uses OpenAI API billing, not a ChatGPT subscription.
 export const claudeAgent = () => {
-  const agent = sandcastle.opencode("google/gemini-3.8-flash", {
+  const agent = sandcastle.opencode("openai/gpt-6-luna", {
     env: {
-      GEMINI_API_KEY: required("GEMINI_API_KEY"),
+      OPENAI_API_KEY: required("OPENAI_API_KEY"),
     },
   });
 
