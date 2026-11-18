@@ -21,16 +21,28 @@ export const writeJson = (filename: string, value: unknown): void => {
   );
 };
 
-// The one agent every factory workflow runs. It authenticates with a Claude
-// subscription. To bill the API instead, pass ANTHROPIC_API_KEY here and in
-// the workflow's env in place of CLAUDE_CODE_OAUTH_TOKEN.
-//
-// Sandcastle runs every agent with its permission checks skipped, so it can
-// use any tool. Claude Code also accepts `permissionMode: "auto"` here for
-// AI-mediated approvals instead (Claude only; other agents don't offer it).
-export const claudeAgent = () =>
-  sandcastle.claudeCode("claude-opus-5-5", {
+// Keep the historical export name so the five workflow consumers stay unchanged.
+// This uses Gemini API billing, not a Claude or Google AI subscription.
+export const claudeAgent = () => {
+  const agent = sandcastle.opencode("google/gemini-3.8-flash", {
     env: {
-      CLAUDE_CODE_OAUTH_TOKEN: required("CLAUDE_CODE_OAUTH_TOKEN"),
+      GEMINI_API_KEY: required("GEMINI_API_KEY"),
     },
   });
+
+  return {
+    ...agent,
+    buildPrintCommand(options: sandcastle.AgentCommandOptions) {
+      const command = agent.buildPrintCommand(options);
+      // A private server inherits this step's key, including on extraction runs.
+      // Do not depend on credentials inherited by an existing shared service.
+      return {
+        ...command,
+        command: command.command.replace(
+          /^opencode run /,
+          "opencode run --standalone "
+        ),
+      };
+    },
+  };
+};
