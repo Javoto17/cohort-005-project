@@ -39,3 +39,5 @@
 reports/
 stryker.log
 
+# Emails written locally instead of sent
+.outbox/
