@@ -1,5 +1,11 @@
 # Coding standards
 
+## Verify module interfaces
+
+Run `npm run check` before considering a change complete; it includes
+`lint:boundaries`. Module imports follow the
+[deep-module convention](./app/modules/README.md), enforced by dependency-cruiser.
+
 ## Fail with a thrown response, not a return value
 
 A loader or an action that cannot continue throws. It does not return an

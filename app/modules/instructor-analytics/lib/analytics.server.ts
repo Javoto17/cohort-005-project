@@ -38,7 +38,7 @@ import {
   rangeStart,
   splitRevenue,
   type AnalyticsRange,
-} from "~/lib/analytics";
+} from "./analytics";
 import { getDiscountForCountry } from "~/lib/ppp";
 import { calendarDay, lastDayOfWindow } from "~/lib/refunds.server";
 

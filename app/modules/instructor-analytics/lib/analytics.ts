@@ -1,5 +1,5 @@
 // ─── Analytics Config ───
-// The vocabulary the analytics page and its service share: how much the
+// The vocabulary the analytics page and its module share: how much the
 // platform keeps, and the time ranges a viewer can ask for.
 //
 // Imported by both the service and the route, so nothing here may touch the

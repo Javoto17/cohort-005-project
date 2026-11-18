@@ -2,13 +2,12 @@ import { Link, isRouteErrorResponse, useSearchParams } from "react-router";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type { Route } from "./+types/instructor.analytics";
 import { requireInstructorOrAdmin } from "~/lib/access.server";
-import { db } from "~/db";
 import {
   ANALYTICS_RANGES,
   PLATFORM_FEE_PERCENT,
   formatBucket,
   formatMoney,
-} from "~/lib/analytics";
+} from "~/modules/instructor-analytics";
 import {
   getInstructorAnalytics,
   type CourseCountryRevenue,
@@ -18,7 +17,7 @@ import {
   type QuizPassRate,
   type RefundExposure,
   type RevenueSeries,
-} from "~/lib/instructor-analytics.server";
+} from "~/modules/instructor-analytics/index.server";
 import { countryName } from "~/lib/ppp";
 import { REFUND_WINDOW_DAYS } from "~/lib/refund-rules";
 import { Button } from "~/components/ui/button";
@@ -39,6 +38,7 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { AlertTriangle, Rocket } from "lucide-react";
+import {PLATFORM_FEE_RATE} from '~/modules/instructor-analytics/lib/analytics'
 
 // ─── Instructor Analytics ───
 // What an instructor earned, and when. Three money figures rather than one:
@@ -46,10 +46,10 @@ import { AlertTriangle, Rocket } from "lucide-react";
 // cut makes that reading wrong.
 //
 // All page state — tab, range, instructor, course — lives in search params, so
-// a view can be linked to and reloaded. The loader hands them to the service
+// a view can be linked to and reloaded. The loader hands them to the module
 // untouched; the controls write them and let the loader re-run.
 //
-// Admins additionally get an instructor picker. With none picked the service
+// Admins additionally get an instructor picker. With none picked the module
 // reports platform-wide.
 
 const chartConfig = {
@@ -66,7 +66,7 @@ export function meta() {
 
 export async function loader({ request, url }: Route.LoaderArgs) {
   const viewer = await requireInstructorOrAdmin(request);
-  return getInstructorAnalytics(db, viewer, url.searchParams, new Date());
+  return getInstructorAnalytics(viewer, url.searchParams, new Date());
 }
 
 function MoneyCard({
