@@ -1,10 +1,36 @@
 # Coding standards
 
-## Verify module interfaces
+## Import a module only through its entry points
 
-Run `npm run check` before considering a change complete; it includes
-`lint:boundaries`. Module imports follow the
-[deep-module convention](./app/modules/README.md), enforced by dependency-cruiser.
+A module in `app/modules/` exposes its root files and hides everything in
+its subfolders. Outside the module, import `~/modules/<name>/index.server`,
+for example, never `~/modules/<name>/lib/...`. The module's own tests also use
+entry points; fixtures within their own `tests/` folder are allowed.
+See the [deep-module convention](./app/modules/README.md).
+
+## A route does not query data a module owns
+
+Once a module owns a feature's data, the route asks the module for it.
+Keep those queries and domain decisions inside the module instead of importing
+`~/db` or `drizzle-orm` into the route to reproduce them.
+
+## Expose focused behaviour, not implementation
+
+Prefer several small root entry points over a barrel re-exporting a whole
+subtree. Extend the interface deliberately when a caller needs new behaviour,
+rather than reaching into private files or relaxing the lint rules.
+
+## Keep browser entry points free of server dependencies
+
+Expose separate server and browser entry points when execution requirements
+differ. Browser entry points must not import server-only dependencies, directly
+or transitively.
+
+## Verify module imports before completing a change
+
+Run `npm run check`; it includes `lint:boundaries`. During review, also check
+that callers delegate domain behaviour to the module and tests assert public
+results rather than implementation details.
 
 ## Fail with a thrown response, not a return value
 
