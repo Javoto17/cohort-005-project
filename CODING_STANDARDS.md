@@ -38,6 +38,9 @@ instructor analytics route only; apply it to every other module by hand. See
 
 ## Arrange tests through the module under test
 
+Changed behaviour has tests for its relevant cases, including failure and
+atomicity where applicable. This also applies to fixes made during review.
+
 Test setup calls the module's own functions. When the function you need does
 not exist, add it to the module rather than inserting rows directly, so a
 change to how the module stores its data leaves its tests alone.
@@ -45,6 +48,8 @@ change to how the module stores its data leaves its tests alone.
 ## Keep files under 5000 tokens
 
 Keep every file under 5000 tokens.
+An extraction needed to satisfy the file-size check is in scope. Verify it
+preserves behaviour; review and test any behavioural change separately.
 
 ## Wrap related writes in a transaction
 

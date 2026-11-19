@@ -13,6 +13,9 @@ Or run the first three with `npm run check`.
 
 Modules are deep modules: see [app/modules/README.md](./app/modules/README.md) before adding or importing one.
 
+The pre-commit hook rejects files over 5,000 tokens, including oversized
+existing files that are edited; split them within the change.
+
 ### About agent-browser
 
 agent-browser lets you drive a real browser through the app from the

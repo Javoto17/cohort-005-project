@@ -52,6 +52,18 @@ change you are reporting on trust.
 Screenshots are PR evidence: a before and an after for a change that shows in
 the UI.
 
+### Enrolled student and comparable screenshots
+
+Seed the database and start the app. Open a lesson, use the floating DevUI
+panel's **Switch user** control, and select an enrolled student. If the seed
+changes, query `enrollments`, `courses`, and `lessons` in `data.db` to find a
+matching user and lesson.
+
+For before and after, use the same user, lesson URL, viewport, and scroll
+position. Check `agent-browser get url` before each capture and collapse the
+DevUI panel so it does not obscure the changed area. Inspect the final branch
+after review fixes, not just the original implementation.
+
 ## Two things that will bite you
 
 **Hydration lags "networkidle".** The button is in the server HTML before
