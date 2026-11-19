@@ -37,18 +37,18 @@ name: Agent — Explore The Tickets
 #   run in front tells you which one you have, and it tells you in prose a
 #   human can read in thirty seconds instead of a diff they have to review.
 #
-# AND THEN IT STOPS
-#   The findings go on the issue as a comment, and the run ends there. You
-#   read the comment and make the call: label `agent:implement` to build it,
-#   or leave it. A plan the workflow cannot use is refused whole: nothing is
-#   written, the run goes red, and every issue in the batch is marked
-#   `agent:blocked`.
+# AND THEN IT BRANCHES
+#   Easy calls go to `agent:implement`; other survivors get `needs-a-human`.
+#   Duplicates close. Invalid plans are refused and the batch is blocked.
+#   FACTORY_PAT applies the trigger label: GITHUB_TOKEN cannot start the next
+#   workflow. The merge remains a human decision.
 #
 # THE LABELS WHILE IT RUNS
 #   When the batch is listed, each issue swaps `agent:explore` for
-#   `agent:in-progress`. Apply takes `agent:in-progress` off once the issue
-#   has its comment. If the run fails, the `finish` job marks every issue
-#   still in progress `agent:blocked`; re-add `agent:explore` to retry.
+#   `agent:exploring`. Apply removes it before handing an issue on. This
+#   separate label prevents cleanup from removing implementer's status.
+#   If the run fails, the `finish` job marks every issue
+#   still exploring `agent:blocked`; re-add `agent:explore` to retry.
 #
 # THE AGENT
 #   A Sandcastle script: .sandcastle/agent-workflows/explore/explore.ts, with
@@ -73,7 +73,7 @@ on:
 
 # One batch at a time, and never cancelled. A label that lands mid-run queues
 # one more run behind this one, and that run lists the batch again when it
-# starts. The issues this run took are `agent:in-progress` by then, so that
+# starts. The issues this run took are `agent:exploring` by then, so that
 # batch is only what was labelled mid-run, and nothing is lost. Every other
 # label gets a throwaway group of its own, so it can never bump that queued run.
 concurrency:
@@ -133,18 +133,18 @@ jobs:
           echo "numbers=$numbers" >> "$GITHUB_OUTPUT"
 
           # The trigger comes off, so putting it back on is how you retry.
-          # `agent:in-progress` stays on until apply moves the issue on.
+          # `agent:exploring` stays on until apply moves the issue on.
           if [ "$numbers" != "[]" ]; then
             # A fresh clone of this repository does not have these labels yet.
-            gh label create "agent:in-progress" --color FBCA04 \
-              --description "An agent is working on this right now" || true
+            gh label create "agent:exploring" --color FBCA04 \
+              --description "The factory is exploring this issue" || true
             gh label create "agent:blocked" --color B60205 \
               --description "An agent run failed here. Its comment says how to retry" || true
           fi
           for n in $(jq -r '.[]' <<< "$numbers"); do
             gh issue edit "$n" --remove-label "agent:explore" || true
             gh issue edit "$n" --remove-label "agent:blocked" || true
-            gh issue edit "$n" --add-label "agent:in-progress"
+            gh issue edit "$n" --add-label "agent:exploring"
           done
 
       - name: Setup Node.js 22
@@ -182,6 +182,21 @@ jobs:
         run: |
           npm run db:migrate
           npm run db:seed
+
+      - name: Cache agent-browser's Chrome
+        if: steps.batch.outputs.numbers != '[]'
+        uses: actions/cache@v4
+        with:
+          path: ~/.agent-browser/browsers
+          key: agent-browser-0.27.0-${{ runner.os }}
+
+      - name: Install agent-browser
+        # The agent drives the app with it for screenshots and checks. Without
+        # it here, each run installs it mid-session.
+        if: steps.batch.outputs.numbers != '[]'
+        run: |
+          npm install -g agent-browser@0.27.0
+          agent-browser install
 
       - name: Explore
         if: steps.batch.outputs.numbers != '[]'
@@ -261,6 +276,9 @@ jobs:
                  then "The plan needs exactly one entry for each of \($batch)."
                  else empty end),
 
+                ($plan[] | select(.tag | IN("easy-call", "needs-a-human", "blocked") | not)
+                 | "#\(.number) has an unknown verdict: \(.tag)."),
+
                 # Something to post.
                 ($plan[] | select((.comment // "") | test("\\S") | not)
                  | "#\(.number) has an empty comment."),
@@ -284,6 +302,10 @@ jobs:
         # They are the one thing the implementer most needs to read.
         run: |
           set -euo pipefail
+          gh label create "needs-a-human" --color D93F0B \
+            --description "The factory stopped here" || true
+          gh label create "agent:implement" --color 5319E7 \
+            --description "Hand this issue to the implementer agent" || true
           # nullglob: an issue with no screenshots gets no --attach.
           shopt -s nullglob
 
@@ -292,11 +314,14 @@ jobs:
           for n in $(jq -r '.issues | sort_by([.duplicate_of != null, .number]) | .[].number' /tmp/plan.json); do
             entry="$(jq -c --argjson n "$n" '.issues[] | select(.number == $n)' /tmp/plan.json)"
             dup="$(jq -r '.duplicate_of // empty' <<< "$entry")"
+            tag="$(jq -r '.tag' <<< "$entry")"
 
             if [ -n "$dup" ]; then
               next="Closed as duplicate of #$dup."
+            elif [ "$tag" = "easy-call" ]; then
+              next="Easy call. Handed to the implementer."
             else
-              next="Explored. Settle the open questions, then label \`agent:implement\` yourself."
+              next="Stopped at \`$tag\`. Settle the open questions, then label \`agent:implement\` yourself."
             fi
 
             jq -r '.comment' <<< "$entry" > /tmp/comment.md
@@ -307,12 +332,20 @@ jobs:
             for png in /tmp/evidence/"$n"-*.png; do attach+=(--attach "$png"); done
             gh issue comment "$n" --body-file /tmp/comment.md "${attach[@]}"
 
-            # `agent:in-progress` comes off: this issue is done, and the
-            # finish job leaves it alone.
-            gh issue edit "$n" --remove-label "agent:in-progress"
             if [ -n "$dup" ]; then
               gh api --method PATCH "repos/$GH_REPO/issues/$n" \
                 -f state=closed -f state_reason=duplicate --silent
+              gh issue edit "$n" --remove-label "agent:exploring"
+            elif [ "$tag" = "easy-call" ]; then
+              # Remove our own state before triggering the next workflow.
+              gh issue edit "$n" --remove-label "agent:exploring"
+              if ! gh issue edit "$n" --add-label "agent:implement"; then
+                gh issue edit "$n" --add-label "agent:exploring"
+                exit 1
+              fi
+            else
+              gh issue edit "$n" --add-label "needs-a-human"
+              gh issue edit "$n" --remove-label "agent:exploring"
             fi
           done
 
@@ -340,15 +373,15 @@ jobs:
           # Only the issues apply did not get to. One it did is already moved on.
           for n in $(jq -r '.[]' <<< "$BATCH"); do
             gh issue view "$n" --json labels --jq '.labels[].name' \
-              | grep -qx "agent:in-progress" || continue
+              | grep -qx "agent:exploring" || continue
             gh issue edit "$n" --add-label "agent:blocked" || true
             gh issue comment "$n" --body \
               "Explore run **failed** — [logs](${RUN_URL}). Re-add \`agent:explore\` to retry. <!-- factory:status -->"
           done
 
-      - name: Always remove in-progress
+      - name: Always remove exploring
         if: always()
         run: |
           for n in $(jq -r '.[]' <<< "$BATCH"); do
-            gh issue edit "$n" --remove-label "agent:in-progress" || true
+            gh issue edit "$n" --remove-label "agent:exploring" || true
           done

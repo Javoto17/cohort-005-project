@@ -132,6 +132,20 @@
         "typescript/no-explicit-any": "off"
       }
     },
+    // Files that already coerce request input with Number(). Remove each entry
+    // once its input goes through a zod schema.
+    {
+      "files": [
+        "app/routes/courses.$slug.$moduleId.tsx",
+        "app/routes/courses.$slug.lessons.$lessonId.tsx",
+        "app/routes/instructor.$courseId.lessons.$lessonId.quiz.tsx",
+        "app/routes/instructor.$courseId.lessons.$lessonId.tsx",
+        "app/routes/instructor.$courseId.modules.$moduleId.tsx"
+      ],
+      "rules": {
+        "input/no-number-coercion": "off"
+      }
+    },
     // Files already over a size limit. Remove each entry once the file is split.
     {
       "files": [

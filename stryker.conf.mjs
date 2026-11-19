@@ -8,6 +8,9 @@ const config = {
   packageManager: "npm",
   testRunner: "vitest",
   vitest: {
+    // Native addons can crash Node during worker-thread teardown. Isolate
+    // Vitest workers in processes instead; Stryker still runs the full suite.
+    pool: "forks",
     // Use the configuration of the project. The defaults of the runner do
     // not agree with it. See vitest.config.ts.
     configFile: "vitest.config.ts",
