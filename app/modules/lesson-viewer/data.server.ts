@@ -12,6 +12,14 @@ import {
   LessonProgressStatus,
   UserRole,
 } from "~/db/schema";
+import { isBookmarked, toggleBookmark } from "~/lib/bookmarks.server";
+import {
+  createComment,
+  deleteComment,
+  editComment,
+} from "~/lib/comments.server";
+import { getNote, saveNote } from "~/lib/notes.server";
+import type { Notifications } from "~/lib/notifications.server";
 import { markdown, type Markdown } from "~/lib/text";
 import type {
   Capability,
@@ -177,7 +185,12 @@ export function getLessonProgressForCourse(userId: number, courseId: number) {
     .all();
 }
 
-export function markLessonComplete(userId: number, lessonId: number) {
+export function markLessonComplete(
+  userId: number,
+  lessonId: number,
+  now: Date
+) {
+  const completedAt = now.toISOString();
   const existing = getLessonProgress(userId, lessonId);
 
   if (existing) {
@@ -185,7 +198,7 @@ export function markLessonComplete(userId: number, lessonId: number) {
       .update(lessonProgress)
       .set({
         status: LessonProgressStatus.Completed,
-        completedAt: new Date().toISOString(),
+        completedAt,
       })
       .where(eq(lessonProgress.id, existing.id))
       .returning()
@@ -198,7 +211,7 @@ export function markLessonComplete(userId: number, lessonId: number) {
       userId,
       lessonId,
       status: LessonProgressStatus.Completed,
-      completedAt: new Date().toISOString(),
+      completedAt,
     })
     .returning()
     .get();
@@ -270,6 +283,31 @@ export function calculateWatchProgress(
   return Math.min(Math.round((maxPosition / videoDurationSeconds) * 100), 100);
 }
 
+export function getLessonNote(userId: number, lessonId: number) {
+  return getNote(db, userId, lessonId);
+}
+
+export function saveLessonNote(note: {
+  userId: number;
+  lessonId: number;
+  body: string;
+  now: Date;
+}) {
+  return saveNote(db, note.userId, note.lessonId, note.body, note.now);
+}
+
+export function isLessonBookmarked(userId: number, lessonId: number) {
+  return isBookmarked(db, userId, lessonId);
+}
+
+export function toggleLessonBookmark(
+  userId: number,
+  lessonId: number,
+  now: Date
+) {
+  return toggleBookmark(db, userId, lessonId, now);
+}
+
 export function getCourseForLesson(lessonId: number) {
   return db
     .select({
@@ -287,6 +325,57 @@ export function getCourseForLesson(lessonId: number) {
 
 export function getCommentById(commentId: number) {
   return db.select().from(comments).where(eq(comments.id, commentId)).get();
+}
+
+export function createLessonComment(comment: {
+  authorId: number;
+  lessonId: number;
+  parentId: number | null;
+  body: string;
+  now: Date;
+  notifications: Notifications;
+}) {
+  return createComment(
+    db,
+    comment.authorId,
+    comment.lessonId,
+    comment.parentId,
+    comment.body,
+    comment.now,
+    comment.notifications
+  );
+}
+
+export function editLessonComment(comment: {
+  commentId: number;
+  userId: number;
+  body: string;
+  now: Date;
+}) {
+  return editComment(
+    db,
+    comment.commentId,
+    comment.userId,
+    comment.body,
+    comment.now
+  );
+}
+
+export function deleteLessonComment(comment: {
+  commentId: number;
+  userId: number;
+  canModerate: boolean;
+  now: Date;
+  notifications: Notifications;
+}) {
+  return deleteComment(
+    db,
+    comment.commentId,
+    comment.userId,
+    comment.canModerate,
+    comment.now,
+    comment.notifications
+  );
 }
 
 export function getLessonThread(lessonId: number): ThreadComment[] {
@@ -310,6 +399,7 @@ export function getLessonThread(lessonId: number): ThreadComment[] {
     .innerJoin(users, eq(comments.userId, users.id))
     .where(eq(comments.lessonId, lessonId))
     .orderBy(asc(comments.createdAt), asc(comments.id))
+    .limit(500)
     .all();
 
   return assembleLessonThread(rows, course.instructorId);

@@ -11,6 +11,10 @@ import {
   calculateWatchProgress,
   getCommentById,
   getCourseWithDetails,
+  createLessonComment,
+  deleteLessonComment,
+  editLessonComment,
+  getLessonNote,
   getLastWatchPosition,
   getLessonById,
   getLessonProgress,
@@ -19,9 +23,12 @@ import {
   getModuleById,
   getUserById,
   INTENT_CAPABILITY,
+  isLessonBookmarked,
   lessonRef,
   markLessonComplete,
   markLessonInProgress,
+  saveLessonNote,
+  toggleLessonBookmark,
   type ThreadComment,
 } from "~/modules/lesson-viewer/data.server";
 import { flattenCourseLessons } from "~/modules/lesson-viewer/curriculum.server";
@@ -33,17 +40,9 @@ import {
   getQuizWithQuestions,
 } from "~/modules/lesson-viewer/quiz.server";
 import { renderComment } from "~/lib/comment-markdown.server";
-import {
-  createComment,
-  deleteComment,
-  editComment,
-} from "~/lib/comments.server";
 import { defaultNotifications } from "~/lib/notifications.server";
-import { isBookmarked, toggleBookmark } from "~/lib/bookmarks.server";
-import { getNote, saveNote } from "~/lib/notes.server";
 import { MAX_NOTE_LENGTH } from "~/lib/notes";
 import type { RenderedComment } from "~/components/comment-thread";
-import { db } from "~/db";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { parseFormData } from "~/lib/validation";
 import { z } from "zod";
@@ -195,9 +194,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const comments = await renderThread(getLessonThread(lessonId));
 
   const bookmarked = currentUserId
-    ? isBookmarked(db, currentUserId, lessonId)
+    ? isLessonBookmarked(currentUserId, lessonId)
     : false;
-  const note = currentUserId ? getNote(db, currentUserId, lessonId) : undefined;
+  const note = currentUserId
+    ? getLessonNote(currentUserId, lessonId)
+    : undefined;
 
   // Render lesson content from Markdown to HTML server-side
   const contentHtml = lesson.content
@@ -320,15 +321,14 @@ export async function action({ params, request }: Route.ActionArgs) {
         if (!parsed.success) {
           return { ok: false, error: "Enter a comment before posting." };
         }
-        const created = await createComment(
-          db,
-          currentUserId,
+        const created = await createLessonComment({
+          authorId: currentUserId,
           lessonId,
-          parsed.data.parentId ?? null,
-          parsed.data.body,
-          new Date(),
-          await defaultNotifications()
-        );
+          parentId: parsed.data.parentId ?? null,
+          body: parsed.data.body,
+          now: new Date(),
+          notifications: await defaultNotifications(),
+        });
         if (!created.ok) return created;
         return { ok: true };
       }
@@ -344,13 +344,12 @@ export async function action({ params, request }: Route.ActionArgs) {
         if (!existing || existing.lessonId !== lessonId) {
           throw data("Comment not found", { status: 404 });
         }
-        const edited = editComment(
-          db,
-          parsed.data.commentId,
-          currentUserId,
-          parsed.data.body,
-          new Date()
-        );
+        const edited = editLessonComment({
+          commentId: parsed.data.commentId,
+          userId: currentUserId,
+          body: parsed.data.body,
+          now: new Date(),
+        });
         if (!edited.ok) return edited;
         return { ok: true };
       }
@@ -367,14 +366,13 @@ export async function action({ params, request }: Route.ActionArgs) {
       // else's takes the manage capability.
       const decisions = coursePermissions.decide(person, ref);
       const canModerate = decisions.found && decisions.manage.allowed;
-      const deleted = await deleteComment(
-        db,
-        parsed.data.commentId,
-        currentUserId,
+      const deleted = await deleteLessonComment({
+        commentId: parsed.data.commentId,
+        userId: currentUserId,
         canModerate,
-        new Date(),
-        await defaultNotifications()
-      );
+        now: new Date(),
+        notifications: await defaultNotifications(),
+      });
       if (!deleted.ok) return deleted;
       return { ok: true };
     } catch (error) {
@@ -389,8 +387,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 
   if (intent === "toggle-bookmark" || intent === "save-note") {
     if (intent === "toggle-bookmark") {
-      const bookmarked = toggleBookmark(
-        db,
+      const bookmarked = toggleLessonBookmark(
         currentUserId,
         lessonId,
         new Date()
@@ -402,19 +399,18 @@ export async function action({ params, request }: Route.ActionArgs) {
     if (!parsed.success) {
       return { ok: false, error: parsed.errors.body };
     }
-    const saved = saveNote(
-      db,
-      currentUserId,
+    const saved = saveLessonNote({
+      userId: currentUserId,
       lessonId,
-      parsed.data.body,
-      new Date()
-    );
+      body: parsed.data.body,
+      now: new Date(),
+    });
     if (!saved.ok) return saved;
     return { ok: true };
   }
 
   if (intent === "mark-complete") {
-    markLessonComplete(currentUserId, lessonId);
+    markLessonComplete(currentUserId, lessonId, new Date());
     return { success: true };
   }
 
