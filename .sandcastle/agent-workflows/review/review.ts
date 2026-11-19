@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import * as path from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
@@ -8,6 +9,7 @@ import { extractionPrompt } from "../shared/extraction-prompt";
 import { runWithExtraction } from "../shared/run-with-extraction";
 import { diffLines } from "./diff-lines";
 import { reviewSchema } from "./review-schema";
+import { partitionComments, formatUnanchored } from "./unanchored-comments";
 
 const BASE_REF = required("BASE_REF");
 
@@ -35,11 +37,10 @@ const git = (...args: string[]): string =>
 // The diff after the agent's commits: the comments land on that.
 const hunks = diffLines(git("diff", `origin/${BASE_REF}...HEAD`));
 const { comments: found }: z.infer<typeof reviewSchema> = result.output;
-const comments = found.filter(({ path: file, line }) => {
-  if (hunks.get(file)?.has(line)) return true;
-  console.error(`Dropping the comment on ${file}:${line}: not in the diff.`);
-  return false;
-});
+const { anchored: comments, unanchored } = partitionComments(found, hunks);
+if (unanchored.length) {
+  appendFileSync("/tmp/review-verdict.md", formatUnanchored(unanchored));
+}
 
 // The request body for POST /repos/{owner}/{repo}/pulls/{n}/reviews.
 writeJson("review-comments.json", {

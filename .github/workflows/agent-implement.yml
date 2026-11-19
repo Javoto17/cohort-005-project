@@ -132,6 +132,19 @@ jobs:
       - name: Install OpenCode
         run: npm install -g @opencode/cli@2.3.2
 
+      - name: Cache agent-browser Chrome
+        uses: actions/cache@v4
+        with:
+          path: ~/.agent-browser/browsers
+          key: agent-browser-0.27.0-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Install agent-browser
+        run: |
+          npm install -g agent-browser@0.27.0
+          if ! find "$HOME/.agent-browser/browsers" -name chrome -type f -perm -u+x 2>/dev/null | grep -q .; then
+            agent-browser install
+          fi
+
       - name: Migrate and seed the database
         # The agent gets a real database, because half of this repo's checks
         # need one. It is disposable: a fresh one, migrated and seeded, on

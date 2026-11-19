@@ -27,6 +27,13 @@ const PACKAGE_INTERNALS = `^${R}/[^/]+/[^/]+/`;
 module.exports = {
   forbidden: [
     {
+      name: "server-code-no-components",
+      comment: "Server modules must not depend on UI components.",
+      severity: "error",
+      from: { path: "\\.server\\.[cm]?[jt]sx?$" },
+      to: { path: "^app/components/" },
+    },
+    {
       name: "entrypoint-boundary-from-app",
       comment:
         "App/root code may import a package's entry points (its root files), but nothing inside its subfolders.",
