@@ -8,6 +8,9 @@ export const explorePlanSchema = z
       .array(
         z.strictObject({
           number: z.number().int().describe("The issue this entry is for."),
+          tag: z
+            .enum(["easy-call", "needs-a-human", "blocked"])
+            .describe("The verdict. A duplicate takes its survivor's tag."),
           duplicate_of: z
             .number()
             .int()

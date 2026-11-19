@@ -4,7 +4,8 @@ name: Agent — Review A Pull Request
 # built.
 #
 # WHAT TRIGGERS IT
-#   Someone puts the `agent:review` label on a pull request.
+#   The implementer puts `agent:review` on its pull request. A person can
+#   also add the label to request or retry a review.
 #
 # THE POINT OF THIS FILE: IT IS MEMORY-LESS
 #   This workflow shares nothing with the implementer run. No session, no

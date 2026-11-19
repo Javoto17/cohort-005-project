@@ -11,6 +11,8 @@ name: Agent — Implement A Ticket
 #   verification checks, and opens a DRAFT pull request with whatever the
 #   agent committed. Draft, always: the human checkpoint we removed from the
 #   *build* has not been removed from the *merge*.
+#   The draft is handed to the reviewer using `agent:review`; merge remains
+#   a human decision.
 #
 #   Every run pushes to a branch of its own, `agent/issue-<n>-<run id>`. A
 #   retry never pushes onto the branch an earlier run left behind, so nothing
@@ -284,6 +286,17 @@ jobs:
             "${attach[@]}")"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
+      - name: Hand the pull request to the reviewer
+        env:
+          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+        run: |
+          set -euo pipefail
+          gh label create "agent:review" --color 5319E7 \
+            --description "Ask the review workflow to read this pull request" || true
+          # A PAT is required: GITHUB_TOKEN does not trigger the review workflow.
+          gh pr edit "$PR_URL" --add-label "agent:review"
+
       - name: Mark blocked on failure
         if: failure()
         env:
@@ -300,7 +313,13 @@ jobs:
           where=""
           [ -n "$PR_URL" ] && where=" Pull request: ${PR_URL}, from \`${BRANCH}\`."
           retry=""
-          [ "$JOB_STATUS" = "failure" ] && retry=" Re-add \`agent:implement\` to retry."
+          if [ "$JOB_STATUS" = "failure" ]; then
+            if [ -n "$PR_URL" ]; then
+              retry=" The PR exists. If review was not started, add \`agent:review\` to it."
+            else
+              retry=" Re-add \`agent:implement\` to retry."
+            fi
+          fi
           # Tagged, so the next run on this ticket leaves it out of the ticket.
           gh issue comment "$ISSUE_NUMBER" --body \
             "Implementer run **${JOB_STATUS}** — [logs](${RUN_URL}).${where}${retry} <!-- factory:status -->"

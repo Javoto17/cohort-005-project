@@ -59,6 +59,8 @@ export async function fileFeedbackIssue(deps: FeedbackDeps, form: FormData) {
     parsed.data.title,
     "--body",
     issueBody(parsed.data),
+    "--label",
+    "agent:explore",
   ]);
 
   return { issueUrl: stdout.trim() };

@@ -21,9 +21,16 @@ Include filenames, and lines of code. Remember that the agent that implements wi
 
 3. DUPLICATES. Confirm a group from the code, not the wording. An issue that is the same bug, root cause or request as an older one gets `duplicate_of` set to the OLDEST (lowest number), which survives. Issues that need separate changes are related, not duplicates: both survive.
 
-4. COMMENT. Write one Markdown `comment` per issue.
+4. VERDICT. Give each issue one `tag`; the workflow uses it to decide what happens next.
+   - `easy-call`: the change is clear and reversible, with no material product, policy, migration or naming decision left for a human. It goes directly to implementation, not directly to merge.
+   - `needs-a-human`: a material decision is needed or the issue's claim does not hold up.
+   - `blocked`: information only the reporter has or a dependency outside this repository is missing.
+   - One-way doors are not easy calls. A duplicate takes its survivor's tag.
+
+5. COMMENT. Write one Markdown `comment` per issue.
    - A duplicate's comment is ONE line: why it is the same issue. The workflow adds "Closed as duplicate of #N." under it.
    - A survivor's comment is skimmable, about 20 lines. Use the style guide in the /pr skill.
+     - the tag and why;
      - whether the issue's claims hold up against the code, with evidence.
      - the blast radius, in prose: the 2–3 places that matter (modules under app/modules/, routes, tables). A schema change or a migration goes first, and loudly;
      - whether it's a one-way or a two-way door
