@@ -181,29 +181,31 @@ function recordQuizAttempt({
   totalQuestions: number;
   questionResults: QuestionResult[];
 }) {
-  const attempt = db
-    .insert(quizAttempts)
-    .values({ userId, quizId, score, passed })
-    .returning()
-    .get();
+  return db.transaction((tx) => {
+    const attempt = tx
+      .insert(quizAttempts)
+      .values({ userId, quizId, score, passed })
+      .returning()
+      .get();
 
-  for (const result of questionResults) {
-    if (result.selectedOptionId === null) continue;
-    db.insert(quizAnswers)
-      .values({
-        attemptId: attempt.id,
-        questionId: result.questionId,
-        selectedOptionId: result.selectedOptionId,
-      })
-      .run();
-  }
-  return {
-    attemptId: attempt.id,
-    score,
-    passed,
-    grade,
-    totalCorrect,
-    totalQuestions,
-    questionResults,
-  };
+    for (const result of questionResults) {
+      if (result.selectedOptionId === null) continue;
+      tx.insert(quizAnswers)
+        .values({
+          attemptId: attempt.id,
+          questionId: result.questionId,
+          selectedOptionId: result.selectedOptionId,
+        })
+        .run();
+    }
+    return {
+      attemptId: attempt.id,
+      score,
+      passed,
+      grade,
+      totalCorrect,
+      totalQuestions,
+      questionResults,
+    };
+  });
 }
