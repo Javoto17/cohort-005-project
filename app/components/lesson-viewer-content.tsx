@@ -196,8 +196,7 @@ function LessonStudyArea({
         <LessonNotes note={note} />
         {contentHtml && (
           <div className="prose prose-neutral dark:prose-invert max-w-none px-5 py-6 sm:px-6">
-            {/* oxlint-disable-next-line react/no-danger -- the instructor wrote this Markdown */}
-            <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
+            <LessonContentHtml contentHtml={contentHtml} />
           </div>
         )}
       </div>
@@ -206,9 +205,15 @@ function LessonStudyArea({
   if (!contentHtml) return null;
   return (
     <div className="prose prose-neutral dark:prose-invert mb-8 max-w-none">
-      {/* oxlint-disable-next-line react/no-danger -- the instructor wrote this Markdown */}
-      <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
+      <LessonContentHtml contentHtml={contentHtml} />
     </div>
+  );
+}
+
+function LessonContentHtml({ contentHtml }: { contentHtml: string }) {
+  return (
+    // oxlint-disable-next-line react/no-danger -- the instructor wrote this Markdown
+    <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
   );
 }
 
