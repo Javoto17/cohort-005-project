@@ -9,9 +9,6 @@ import {
 } from "~/modules/permissions/course-permissions.server";
 import {
   calculateWatchProgress,
-  computeResult,
-  flattenCourseLessons,
-  getBestAttempt,
   getCommentById,
   getCourseWithDetails,
   getLastWatchPosition,
@@ -20,15 +17,21 @@ import {
   getLessonProgressForCourse,
   getLessonThread,
   getModuleById,
-  getQuizByLessonId,
-  getQuizWithQuestions,
   getUserById,
   INTENT_CAPABILITY,
   lessonRef,
   markLessonComplete,
   markLessonInProgress,
   type ThreadComment,
-} from "~/modules/lesson-viewer/index.server";
+} from "~/modules/lesson-viewer/data.server";
+import { flattenCourseLessons } from "~/modules/lesson-viewer/curriculum.server";
+import {
+  computeResult,
+  getBestAttempt,
+  getQuizByLessonId,
+  getQuizForLesson,
+  getQuizWithQuestions,
+} from "~/modules/lesson-viewer/quiz.server";
 import { renderComment } from "~/lib/comment-markdown.server";
 import {
   createComment,
@@ -41,8 +44,6 @@ import { getNote, saveNote } from "~/lib/notes.server";
 import { MAX_NOTE_LENGTH } from "~/lib/notes";
 import type { RenderedComment } from "~/components/comment-thread";
 import { db } from "~/db";
-import { quizzes } from "~/db/schema";
-import { eq } from "drizzle-orm";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { parseFormData } from "~/lib/validation";
 import { z } from "zod";
@@ -424,8 +425,8 @@ export async function action({ params, request }: Route.ActionArgs) {
     }
     // Scope the quiz to this lesson so a quiz elsewhere can't be reached by
     // posting its id to this route.
-    const quiz = db.select().from(quizzes).where(eq(quizzes.id, quizId)).get();
-    if (!quiz || quiz.lessonId !== lessonId) {
+    const quiz = getQuizForLesson(lessonId, quizId);
+    if (!quiz) {
       throw data("Quiz not found", { status: 404 });
     }
 
