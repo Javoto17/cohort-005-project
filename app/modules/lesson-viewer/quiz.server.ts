@@ -24,23 +24,30 @@ export function getQuizWithQuestions(quizId: number) {
   const quiz = db.select().from(quizzes).where(eq(quizzes.id, quizId)).get();
   if (!quiz) return null;
 
-  const questions = db
-    .select()
+  const rows = db
+    .select({ question: quizQuestions, option: quizOptions })
     .from(quizQuestions)
+    .leftJoin(quizOptions, eq(quizOptions.questionId, quizQuestions.id))
     .where(eq(quizQuestions.quizId, quizId))
     .orderBy(quizQuestions.position)
     .all();
 
-  const questionsWithOptions = questions.map((question) => {
-    const options = db
-      .select()
-      .from(quizOptions)
-      .where(eq(quizOptions.questionId, question.id))
-      .all();
-    return { ...question, options };
-  });
+  const questionsWithOptions = new Map<
+    number,
+    (typeof rows)[number]["question"] & {
+      options: (typeof quizOptions.$inferSelect)[];
+    }
+  >();
+  for (const { question, option } of rows) {
+    let questionWithOptions = questionsWithOptions.get(question.id);
+    if (!questionWithOptions) {
+      questionWithOptions = { ...question, options: [] };
+      questionsWithOptions.set(question.id, questionWithOptions);
+    }
+    if (option) questionWithOptions.options.push(option);
+  }
 
-  return { ...quiz, questions: questionsWithOptions };
+  return { ...quiz, questions: [...questionsWithOptions.values()] };
 }
 
 export function getBestAttempt(userId: number, quizId: number) {
@@ -90,8 +97,9 @@ export function computeResult(
       .all();
 
     const total = questions.length;
+    const correctOptionIds = getCorrectOptionIds(quizId);
     const questionResults = questions.map((question) =>
-      getQuestionResult(question, selectedAnswers)
+      getQuestionResult(question, selectedAnswers, correctOptionIds)
     );
     const correct = questionResults.filter((result) => result.correct).length;
     const scoreValue = total > 0 ? correct / total : 0;
@@ -116,7 +124,8 @@ export function computeResult(
 
 function getQuestionResult(
   question: { id: number; questionType: string },
-  selectedAnswers: Record<number, number>
+  selectedAnswers: Record<number, number>,
+  correctOptionIds: Map<number, number>
 ): QuestionResult {
   const selectedOptionId = selectedAnswers[question.id];
   if (selectedOptionId === undefined) {
@@ -127,7 +136,7 @@ function getQuestionResult(
       correctOptionId: null,
     };
   }
-  const correctOptionId = getCorrectOptionId(question);
+  const correctOptionId = correctOptionIds.get(question.id) ?? null;
   return {
     questionId: question.id,
     correct: selectedOptionId === correctOptionId,
@@ -136,29 +145,21 @@ function getQuestionResult(
   };
 }
 
-function getCorrectOptionId(question: { id: number; questionType: string }) {
-  if (question.questionType === "multiple_choice") {
-    const options = db
-      .select()
-      .from(quizOptions)
-      .where(eq(quizOptions.questionId, question.id))
-      .all();
-    return options.find((option) => option.isCorrect === true)?.id ?? null;
-  }
-  if (question.questionType === "true_false") {
-    const correctOption = db
-      .select({ id: quizOptions.id })
-      .from(quizOptions)
-      .where(
-        and(
-          eq(quizOptions.questionId, question.id),
-          eq(quizOptions.isCorrect, true)
-        )
-      )
-      .get();
-    return correctOption?.id ?? null;
-  }
-  return null;
+function getCorrectOptionIds(quizId: number) {
+  const correctOptions = db
+    .select({
+      questionId: quizOptions.questionId,
+      id: quizOptions.id,
+    })
+    .from(quizOptions)
+    .innerJoin(quizQuestions, eq(quizQuestions.id, quizOptions.questionId))
+    .where(
+      and(eq(quizQuestions.quizId, quizId), eq(quizOptions.isCorrect, true))
+    )
+    .all();
+  return new Map(
+    correctOptions.map((option) => [option.questionId, option.id])
+  );
 }
 
 function recordQuizAttempt({
