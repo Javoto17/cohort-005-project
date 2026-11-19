@@ -10,6 +10,7 @@ import {
   Github,
 } from "lucide-react";
 import { CommentThread } from "~/components/comment-thread";
+import { LessonBreadcrumb } from "~/components/lesson-breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { YouTubePlayer } from "~/components/youtube-player";
@@ -370,37 +371,6 @@ function LessonNavLink({
       </div>
       {!isPrevious && <ChevronRight className="size-4" />}
     </Link>
-  );
-}
-
-function LessonBreadcrumb({
-  course,
-  mod,
-  lessonTitle,
-}: {
-  course: { title: string; slug: string };
-  mod: { id: number; title: string };
-  lessonTitle: string;
-}) {
-  return (
-    <nav className="mb-6 text-sm text-muted-foreground">
-      <Link to="/courses" className="hover:text-foreground">
-        Courses
-      </Link>
-      <span className="mx-2">/</span>
-      <Link to={`/courses/${course.slug}`} className="hover:text-foreground">
-        {course.title}
-      </Link>
-      <span className="mx-2">/</span>
-      <Link
-        to={`/courses/${course.slug}/${mod.id}`}
-        className="hover:text-foreground"
-      >
-        {mod.title}
-      </Link>
-      <span className="mx-2">/</span>
-      <span className="text-foreground">{lessonTitle}</span>
-    </nav>
   );
 }
 
