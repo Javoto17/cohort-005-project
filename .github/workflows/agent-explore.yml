@@ -162,14 +162,41 @@ jobs:
         if: steps.batch.outputs.numbers != '[]'
         run: npm install -g @opencode/cli@2.3.2
 
+      - name: Cache agent-browser Chrome
+        if: steps.batch.outputs.numbers != '[]'
+        uses: actions/cache@v4
+        with:
+          path: ~/.agent-browser/browsers
+          key: agent-browser-0.27.0-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Install agent-browser
+        if: steps.batch.outputs.numbers != '[]'
+        run: |
+          npm install -g agent-browser@0.27.0
+          if ! find "$HOME/.agent-browser/browsers" -name chrome -type f -perm -u+x 2>/dev/null | grep -q .; then
+            agent-browser install
+          fi
+
+      - name: Migrate and seed the database
+        if: steps.batch.outputs.numbers != '[]'
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
       - name: Explore
         if: steps.batch.outputs.numbers != '[]'
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          # First-use web search asks an interactive provider-selection question.
+          # Explore uses repository and browser evidence, not public search.
+          OPENCODE_CONFIG_CONTENT: '{"websearch":false}'
           OUTPUT_DIR: ${{ runner.temp }}
         # The plan comes back as plan.json, shaped and validated by
         # .sandcastle/agent-workflows/explore/plan-schema.ts.
-        run: npx tsx .sandcastle/agent-workflows/explore/explore.ts
+        run: |
+          set -euo pipefail
+          opencode debug config --standalone | jq -e '[.[] | .info? | objects | select(has("websearch")) | .websearch] | last == false' > /dev/null
+          npx tsx .sandcastle/agent-workflows/explore/explore.ts
 
       - name: Hand the plan to the apply job
         id: plan
