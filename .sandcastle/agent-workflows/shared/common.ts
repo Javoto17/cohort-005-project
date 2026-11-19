@@ -22,11 +22,12 @@ export const writeJson = (filename: string, value: unknown): void => {
 };
 
 // Keep the historical export name so the five workflow consumers stay unchanged.
-// This uses OpenAI API billing, not a ChatGPT subscription.
+// The Go provider routes through the subscription endpoint, not OpenAI directly.
+// Extra Usage is controlled in Console; keep it off to avoid balance overages.
 export const claudeAgent = () => {
-  const agent = sandcastle.opencode("openai/gpt-6-luna", {
+  const agent = sandcastle.opencode("opencode-go/gpt-6-luna", {
     env: {
-      OPENAI_API_KEY: required("OPENAI_API_KEY"),
+      OPENCODE_API_KEY: required("OPENCODE_API_KEY"),
     },
   });
 

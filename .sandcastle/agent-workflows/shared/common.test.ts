@@ -7,8 +7,9 @@ afterEach(() => {
 });
 
 describe("factory agent", () => {
-  it("requires the OpenAI secret before starting a CLI", () => {
-    vi.stubEnv("OPENAI_API_KEY", "");
+  it("requires the Go secret even when an OpenAI key is present", () => {
+    vi.stubEnv("OPENCODE_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "unused-openai-test-key");
     vi.spyOn(console, "error").mockImplementation(() => {});
     const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("Missing secret");
@@ -17,12 +18,12 @@ describe("factory agent", () => {
     expect(() => claudeAgent()).toThrow("Missing secret");
     expect(exit).toHaveBeenCalledWith(1);
     expect(console.error).toHaveBeenCalledWith(
-      "Missing required env var: OPENAI_API_KEY"
+      "Missing required env var: OPENCODE_API_KEY"
     );
   });
 
-  it("uses Luna through OpenCode without putting the key in argv", () => {
-    vi.stubEnv("OPENAI_API_KEY", "test-only-key");
+  it("uses Luna through Go without putting the key in argv", () => {
+    vi.stubEnv("OPENCODE_API_KEY", "test-only-key");
     const agent = claudeAgent();
     const { command } = agent.buildPrintCommand({
       prompt: "Read the ticket",
@@ -30,15 +31,15 @@ describe("factory agent", () => {
     });
 
     expect(agent.name).toBe("opencode");
-    expect(agent.env).toEqual({ OPENAI_API_KEY: "test-only-key" });
+    expect(agent.env).toEqual({ OPENCODE_API_KEY: "test-only-key" });
     expect(command).toContain("opencode run --standalone --format json");
-    expect(command).toContain("openai/gpt-6-luna");
+    expect(command).toContain("opencode-go/gpt-6-luna");
     expect(command).toContain("--dangerously-skip-permissions");
     expect(command).not.toContain("test-only-key");
   });
 
   it("retains session storage and standalone mode for extraction", () => {
-    vi.stubEnv("OPENAI_API_KEY", "test-only-key");
+    vi.stubEnv("OPENCODE_API_KEY", "test-only-key");
     const agent = claudeAgent();
     const { command } = agent.buildPrintCommand({
       prompt: "Emit the validated plan",
