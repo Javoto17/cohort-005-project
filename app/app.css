@@ -121,6 +121,46 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.landing-page {
+  --background: #bfdbf7;
+  --foreground: #053c5e;
+  --card: #ffffff;
+  --card-foreground: #053c5e;
+  --popover: #ffffff;
+  --popover-foreground: #053c5e;
+  --primary: #a31621;
+  --primary-foreground: #ffffff;
+  --secondary: #1f7a8c;
+  --secondary-foreground: #ffffff;
+  --muted: #bfdbf7;
+  --muted-foreground: #053c5e;
+  --accent: #db222a;
+  --accent-foreground: #ffffff;
+  --border: color-mix(in srgb, #053c5e 22%, transparent);
+  --input: #1f7a8c;
+  --ring: #1f7a8c;
+}
+
+.dark .landing-page {
+  --background: #053c5e;
+  --foreground: #bfdbf7;
+  --card: #053c5e;
+  --card-foreground: #bfdbf7;
+  --popover: #053c5e;
+  --popover-foreground: #bfdbf7;
+  --primary: #db222a;
+  --primary-foreground: #ffffff;
+  --secondary: #1f7a8c;
+  --secondary-foreground: #ffffff;
+  --muted: #053c5e;
+  --muted-foreground: #bfdbf7;
+  --accent: #a31621;
+  --accent-foreground: #ffffff;
+  --border: color-mix(in srgb, #bfdbf7 35%, transparent);
+  --input: #bfdbf7;
+  --ring: #bfdbf7;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
