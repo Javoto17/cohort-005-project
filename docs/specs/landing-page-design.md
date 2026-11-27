@@ -17,7 +17,7 @@ Refresh the `/` landing page so visitors understand Cadence's self-paced learnin
 
 - Update the landing route in `app/routes/home.tsx`. Preserve its loader data and current-user-dependent navigation.
 - Add landing-scoped semantic color variables in `app/app.css`, applied only below a landing-page root class. Do not change shared theme tokens.
-- Use the supplied colors: `#a31621`, `#bfdbf7`, `#053c5e`, `#1f7a8c`, and `#db222a`. Assign colors to semantic roles by contrast, not by hue alone. Add dark-mode variants under the landing-page scope.
+- Use orange `#c2410c` for the primary and accent roles, replacing the supplied red and burgundy. Preserve the supplied blue `#bfdbf7`, navy `#053c5e`, and teal `#1f7a8c`. Assign colors to semantic roles by contrast, not by hue alone. Add dark-mode variants under the landing-page scope.
 - Keep the page's course and category counts tied to loader data. Keep featured-course links tied to their existing slugs.
 - Do not add dependencies, database fields, or routes.
 
@@ -26,6 +26,7 @@ Refresh the `/` landing page so visitors understand Cadence's self-paced learnin
 - **Landing-only palette:** Shared theme tokens would also recolor the catalog and authenticated app. The requester chose `/` only, so landing-scoped variables limit the blast radius.
 - **Course discovery as the primary action:** Registration could be a stronger acquisition action, but the requester chose exploring courses. Keep registration as the existing secondary navigation action.
 - **Accessible palette roles:** A fixed assignment can produce low-contrast text. Choose foreground/background pairs that meet WCAG AA contrast, including in dark mode.
+- **Orange revision:** Replace only red and burgundy with `#c2410c`; preserve blue, navy, and teal as the requester specified.
 
 ## Assumptions
 
